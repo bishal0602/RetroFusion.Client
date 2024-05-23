@@ -25,6 +25,11 @@
              SemanticProperties.HeadingLevel="Level2"
              SemanticProperties.Description="Welcome to dot net Multi platform App U I" />
 
+            <Entry
+             Placeholder="Enter username"
+             Text="{Binding Username}"
+             ReturnType="Done"
+             IsEnabled="{Binding IsSearchStopped}"/>
             <Button
              Text="Search for host"
              SemanticProperties.Hint="Listens to UDP Broadcasts for Host information"
@@ -41,7 +46,14 @@
                 ItemsSource="{Binding BroadcastMessages}">
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="{x:Type x:String}">
-                        <Label Text="{Binding .}"/>
+                        <Frame BackgroundColor="Transparent">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:MainViewModel}}, Path=SelectServerCommand}"
+            CommandParameter="{Binding .}"/>
+                            </Frame.GestureRecognizers>
+                            <Label Text="{Binding .}" />
+                        </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>

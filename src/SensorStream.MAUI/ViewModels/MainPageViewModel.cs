@@ -25,6 +25,8 @@ public partial class MainViewModel: ObservableObject
 
     [ObservableProperty]
     ObservableCollection<BroadcastMessageModel> broadcastMessages = new();
+    [ObservableProperty]
+    string username = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSearchStopped))]
@@ -39,7 +41,12 @@ public partial class MainViewModel: ObservableObject
             await Shell.Current.DisplayAlert("No Internet", "No internet connection detected. You need to be connected to a network first!", "OK");
             return;
         }
-     
+        if (String.IsNullOrEmpty(Username))
+        {
+            await Shell.Current.DisplayAlert("Username Required", "Please enter a username first", "OK");
+            return;
+        }
+
         IsSearchRunning = true;
 
         if(_cancellationTokenSource != null)
@@ -55,6 +62,20 @@ public partial class MainViewModel: ObservableObject
     {
         _cancellationTokenSource?.Cancel();
         IsSearchRunning = false;
+    }
+    [RelayCommand]
+    async Task SelectServer(BroadcastMessageModel selectedServer)
+    {
+        if (String.IsNullOrEmpty(Username))
+        {
+            await Shell.Current.DisplayAlert("Username Required", "Please enter a username first", "OK");
+            return;
+        }
+        await Shell.Current.GoToAsync(nameof(LobbyPage),
+            new Dictionary<string, object>
+            {
+                {"LobbyParams", new LobbyParams(selectedServer, Username) }
+            });
     }
     private async void StartListening(CancellationToken cancellationToken)
     {

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="SensorStream.MAUI.LobbyPage"
+             xmlns:viewmodel="clr-namespace:SensorStream.MAUI.ViewModels"
+             x:DataType="viewmodel:LobbyViewModel"
+             Title="Lobby">
+    <VerticalStackLayout>
+        <Label 
+            Text="{Binding LobbyParams.Server}"
+            VerticalOptions="Center" 
+            HorizontalOptions="Center" />
+
+        <Label 
+            Text="Accelerometer"
+            VerticalOptions="Center" 
+            HorizontalOptions="Start" />
+        <Label 
+            Text="{Binding AccelerometerData}"
+            VerticalOptions="Center" 
+            HorizontalOptions="Start" />
+
+        <Label
+            Text="Gyroscope"
+            VerticalOptions="Center" 
+            HorizontalOptions="Start" />
+        <Label
+            Text="{Binding GyroscopeData}"
+            VerticalOptions="Center" 
+            HorizontalOptions="Start" />
+
+        <Label
+            Text="Orientation"
+            VerticalOptions="Center" 
+            HorizontalOptions="Start" />
+        <Label
+            Text="{Binding OrientationData}"
+            VerticalOptions="Center" 
+            HorizontalOptions="Start" />
+    </VerticalStackLayout>
+</ContentPage>

@@ -21,6 +21,9 @@ namespace SensorStream.MAUI
             builder.Services.AddSingleton<MainPage>();
             builder.Services.AddSingleton<MainViewModel>();
 
+            builder.Services.AddTransient<LobbyPage>();
+            builder.Services.AddTransient<LobbyViewModel>();
+
 #if DEBUG
     		builder.Logging.AddDebug();
 #endif
