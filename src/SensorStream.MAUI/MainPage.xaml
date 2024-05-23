@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="SensorStream.MAUI.MainPage"
              xmlns:viewmodel="clr-namespace:SensorStream.MAUI.ViewModels"
+             xmlns:model="clr-namespace:SensorStream.MAUI.Models"
              x:DataType="viewmodel:MainViewModel">
     <ScrollView>
         <VerticalStackLayout
@@ -45,20 +46,23 @@
             <CollectionView 
                 ItemsSource="{Binding BroadcastMessages}">
                 <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="{x:Type x:String}">
+                    <DataTemplate x:DataType="{x:Type model:BroadcastMessageModel}">
                         <Frame BackgroundColor="Transparent">
                             <Frame.GestureRecognizers>
                                 <TapGestureRecognizer 
-            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:MainViewModel}}, Path=SelectServerCommand}"
-            CommandParameter="{Binding .}"/>
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:MainViewModel}}, Path=SelectServerCommand}"
+                                    CommandParameter="{Binding .}"/>
                             </Frame.GestureRecognizers>
-                            <Label Text="{Binding .}" />
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Name}" />
+                                <Label Text="{Binding IP}" />
+                                <Label Text="{Binding WS_Port}" />
+                            </VerticalStackLayout>
                         </Frame>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
             
-
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
