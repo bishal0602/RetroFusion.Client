@@ -23,8 +23,7 @@ public partial class LobbyPage : ContentPage
             var viewModel = BindingContext as LobbyViewModel;
             if (viewModel != null)
             {
-                viewModel.StopSensorData();
-                await viewModel.DisconnectWebSocketAsync();
+                await viewModel.TerminateConnection();
             }
             await Shell.Current.GoToAsync("..");
         }

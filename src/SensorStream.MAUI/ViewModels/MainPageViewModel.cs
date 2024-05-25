@@ -1,32 +1,32 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using SensorStream.MAUI.Helpers;
 using SensorStream.MAUI.Models;
+using SensorStream.MAUI.Services;
 using System.Collections.ObjectModel;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
 
 namespace SensorStream.MAUI.ViewModels;
 
-public partial class MainViewModel: ObservableObject
+public partial class MainViewModel: ObservableObject, IDisposable
 {
-    private readonly IConnectivity _connectivity;
+    const int UDP_BROADCAST_PORT = 9752;
 
-    private const int UDP_BROADCAST_PORT = 9752; //FLAG:TODO Make it configurable
-    private readonly UdpClient _udpClient;
-    private CancellationTokenSource? _cancellationTokenSource;
-    public MainViewModel(IConnectivity connectivity)
+    private readonly IConnectivity _connectivity;
+    private readonly IUdpService _udpService;
+    private readonly IUiNotificationHelper _uiNotificationHelper;
+    public MainViewModel(IConnectivity connectivity, IUdpService udpService, IUiNotificationHelper uiNotificationHelper)
     {
-        _connectivity = connectivity ?? throw new ArgumentNullException(nameof(connectivity));
-        _udpClient = new UdpClient();
-        _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, UDP_BROADCAST_PORT));
-        IsSearchRunning = false;
+        _connectivity = connectivity;
+        _udpService = udpService;
+        _uiNotificationHelper = uiNotificationHelper;
+
+        _udpService.MessageReceived += OnMessageReceived;
     }
 
     [ObservableProperty]
     ObservableCollection<BroadcastMessageModel> broadcastMessages = new();
     [ObservableProperty]
-    string username = string.Empty;
+    string username = Preferences.Default.Get("username", "");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSearchStopped))]
@@ -38,37 +38,32 @@ public partial class MainViewModel: ObservableObject
     {
         if(_connectivity.NetworkAccess != NetworkAccess.Internet)
         {
-            await Shell.Current.DisplayAlert("No Internet", "No internet connection detected. You need to be connected to a network first!", "OK");
+            await _uiNotificationHelper.DisplayToastAsync("Please connect to a network first");
             return;
         }
         if (String.IsNullOrEmpty(Username))
         {
-            await Shell.Current.DisplayAlert("Username Required", "Please enter a username first", "OK");
+            await _uiNotificationHelper.DisplayToastAsync("Please enter a username first");
             return;
         }
 
         IsSearchRunning = true;
+        await _udpService.StartListeningAsync(UDP_BROADCAST_PORT);
 
-        if(_cancellationTokenSource != null)
-        {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource.Dispose();
-        }
-        _cancellationTokenSource = new CancellationTokenSource();
-        StartListening(_cancellationTokenSource.Token);
+        Preferences.Default.Set("username", Username);
     }
     [RelayCommand]
     void StopSearch()
     {
-        _cancellationTokenSource?.Cancel();
         IsSearchRunning = false;
+        _udpService.StopListening();
     }
     [RelayCommand]
     async Task SelectServer(BroadcastMessageModel selectedServer)
     {
         if (String.IsNullOrEmpty(Username))
         {
-            await Shell.Current.DisplayAlert("Username Required", "Please enter a username first", "OK");
+            await _uiNotificationHelper.DisplayToastAsync("Please enter a username first");
             return;
         }
         await Shell.Current.GoToAsync(nameof(LobbyPage),
@@ -77,55 +72,18 @@ public partial class MainViewModel: ObservableObject
                 {"LobbyParams", new LobbyParams(selectedServer, Username) }
             });
     }
-    private async void StartListening(CancellationToken cancellationToken)
+    public void Dispose()
     {
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var result = await _udpClient.ReceiveAsync(cancellationToken);
-                string message = Encoding.ASCII.GetString(result.Buffer);
-                var serverIP = result.RemoteEndPoint.Address.MapToIPv4().ToString();
-                var uDPBroadcastMessage = ParseMessage(message, serverIP);
-                if (uDPBroadcastMessage != null && !BroadcastMessages.Contains(uDPBroadcastMessage))
-                {
-                    MainThread.BeginInvokeOnMainThread(() =>
-                    {
-                        BroadcastMessages.Add(uDPBroadcastMessage);
-                    });
-                }
-            }
-        }
-        catch (Exception ex) when (ex is OperationCanceledException || ex is ObjectDisposedException)
-        {
-            // Expected exception when the operation is canceled or UDPClient is disposed
-        }
-        catch (Exception ex) 
+        _udpService.Dispose();
+    }
+    private void OnMessageReceived(BroadcastMessageModel message)
+    {
+        if (!BroadcastMessages.Contains(message))
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                Shell.Current.DisplayAlert("Error", ex.Message, "OK");
+                BroadcastMessages.Add(message);
             });
         }
-    }
-    public void Dispose()
-    {
-        _udpClient.Dispose();
-        _cancellationTokenSource?.Dispose();
-    }
-    /// <summary>
-    /// Returns a BroadcastMessage if the message is in the correct format else returns null
-    /// </summary>
-    /// <param name="message">Message must be in format [Name];;[Port]</param>
-    /// <param name="ip">Server's IP Address</param>
-    /// <returns></returns>
-    private BroadcastMessageModel? ParseMessage(string message, string ip)
-    {
-        var parts = message.Split(new[] { ";;" }, StringSplitOptions.None);
-        if (parts.Length == 2 && int.TryParse(parts[1], out var port))
-        {
-            return new BroadcastMessageModel(parts[0], ip, port);
-        }
-        return null;
     }
 }

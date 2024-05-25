@@ -1,9 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using SensorStream.MAUI.Helpers;
 using SensorStream.MAUI.Models;
 using SensorStream.MAUI.Services;
 using System.Diagnostics;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace SensorStream.MAUI.ViewModels;
 [QueryProperty("LobbyParams", "LobbyParams")]
@@ -22,9 +22,18 @@ public partial class LobbyViewModel : ObservableObject
     OrientationSensorData orientationData = new();
 
     IWebSocketService _webSocketService;
+    private readonly IUiNotificationHelper _uiNotificationHelper;
+    private readonly SensorService _sensorService;
 
-    public LobbyViewModel()
+    private EventHandler<AccelerometerChangedEventArgs>? _accelerometerHandler;
+    public LobbyViewModel(IWebSocketService webSocketService, IUiNotificationHelper uiNotificationHelper)
     {
+        _webSocketService = webSocketService;
+        _uiNotificationHelper = uiNotificationHelper;
+
+        _sensorService = new SensorService();
+        _sensorService.StartIfNotStarted();
+
         StartListeningForSensorData();
     }
 
@@ -36,23 +45,17 @@ public partial class LobbyViewModel : ObservableObject
             Shell.Current.GoToAsync("..");
             return;
         }
-        var serverUri = $"ws://{value.Server.IP}:{value.Server.WS_Port}?username={value.Username}";
-        _webSocketService = new WebSocketService(serverUri);
+        var serverUri = new Uri($"ws://{value.Server.IP}:{value.Server.WS_Port}?username={value.Username}");
+
         _webSocketService.MessageReceived += OnMessageReceived;
-        _webSocketService.ErrorOccurred += OnErrorOccurred;
-        try
-        {
-            _webSocketService.ConnectAsync();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"WebSocket connection error: {ex.Message}");
-            Shell.Current.DisplayAlert("WebSocket connection error", ex.Message, "OK");
-        }
+        _webSocketService.ErrorOccurred += OnSocketErrorOccurred;
+
+        _webSocketService.ConnectAsync(serverUri);
     }
 
     private void OnMessageReceived(string message)
     {
+        // Just for testing, needs refactoring
         if (message.StartsWith("SocketId:"))
         {
             SocketId = message.Replace("SocketId:", "");
@@ -63,14 +66,15 @@ public partial class LobbyViewModel : ObservableObject
         }
     }
 
-    private void OnErrorOccurred(Exception ex)
+    private void OnSocketErrorOccurred(Exception ex)
     {
-        Debug.WriteLine($"WebSocket error: {ex.Message}");
+        _uiNotificationHelper.DisplayAlertAsync("Web Socket Error", ex.Message);
     }
 
     private void StartSendingSensorData()
     {
-        Accelerometer.ReadingChanged += async (_, _) =>
+        // Make it timer based instead of accelerometer subscriber???
+        _accelerometerHandler = async (_, _) =>
         {
             var sensorData = new
             {
@@ -98,73 +102,41 @@ public partial class LobbyViewModel : ObservableObject
             var json = JsonSerializer.Serialize(sensorData);
             await _webSocketService.SendAsync(json);
         };
-    }
 
+         _sensorService.Accelerometer.ReadingChanged += _accelerometerHandler;
+    }
     private void StartListeningForSensorData()
     {
-        Accelerometer.ReadingChanged += (sender, args) =>
+        _sensorService.StartIfNotStarted();
+
+        _sensorService.Accelerometer.ReadingChanged += (sender, args) =>
         {
             var reading = args.Reading;
             AccelerometerData = reading;
         };
-        Gyroscope.ReadingChanged += (sender, args) =>
+        _sensorService.Gyroscope.ReadingChanged += (sender, args) =>
         {
             var reading = args.Reading;
             GyroscopeData = reading;
         };
-        OrientationSensor.ReadingChanged += (sender, args) =>
+        _sensorService.OrientationSensor.ReadingChanged += (sender, args) =>
         {
             var reading = args.Reading;
             OrientationData = reading;
         };
-        if (!Accelerometer.Default.IsMonitoring)
-        {
-            Accelerometer.Start(SensorSpeed.Game);
-        }
-        if (!Gyroscope.Default.IsMonitoring)
-        {
-            Gyroscope.Start(SensorSpeed.Game);
-        }
-        if (!OrientationSensor.Default.IsMonitoring)
-        {
-            OrientationSensor.Start(SensorSpeed.Game);
-        }
     }
 
-    public void StopSensorData()
-    {
-        if (Accelerometer.Default.IsMonitoring)
-        {
-            Accelerometer.Stop();
-        }
-        if (Gyroscope.Default.IsMonitoring)
-        {
-            Gyroscope.Stop();
-        }
-        if (OrientationSensor.Default.IsMonitoring)
-        {
-            OrientationSensor.Stop();
-        }
-    }
-
-    public async Task DisconnectWebSocketAsync()
+    public async Task TerminateConnection()
     {
         if (_webSocketService != null)
         {
             await _webSocketService.DisconnectAsync();
         }
+        _sensorService.StopIfStarted();
+        if (_accelerometerHandler != null)
+        {
+            _sensorService.Accelerometer.ReadingChanged -= _accelerometerHandler;
+            _accelerometerHandler = null;
+        }
     }
-}
-
-public class LobbyParams
-{
-    public LobbyParams(BroadcastMessageModel server, string username)
-    {
-        Server = server;
-        Username = username;
-    }
-
-    public BroadcastMessageModel Server { get; set; }
-    public string Username { get; set; }
-    
 }

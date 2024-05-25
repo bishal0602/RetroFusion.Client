@@ -5,25 +5,28 @@ namespace SensorStream.MAUI.Services;
 public class WebSocketService : IDisposable, IWebSocketService
 {
     private ClientWebSocket _webSocket;
-    private readonly Uri _serverUri;
-    private CancellationTokenSource _cancellationTokenSource;
+    private CancellationTokenSource? _cancellationTokenSource;
     private Task _receivingTask;
 
-    public event Action<string> MessageReceived;
-    public event Action<Exception> ErrorOccurred;
+    public event Action<string>? MessageReceived;
+    public event Action<Exception>? ErrorOccurred;
 
-    public WebSocketService(string serverUri)
+    public WebSocketService()
     {
         _webSocket = new ClientWebSocket();
-        _serverUri = new Uri(serverUri);
-        _cancellationTokenSource = new CancellationTokenSource();
     }
 
-    public async Task ConnectAsync()
+    public async Task ConnectAsync(Uri serverUri)
     {
         try
         {
-            await _webSocket.ConnectAsync(_serverUri, CancellationToken.None);
+            // Needed if web socket is reconnected after a disconnection
+            if (_webSocket.State == WebSocketState.Closed || _webSocket.State == WebSocketState.Aborted)
+            {
+                _webSocket = new ClientWebSocket(); 
+            }
+            _cancellationTokenSource = new CancellationTokenSource();
+            await _webSocket.ConnectAsync(serverUri, _cancellationTokenSource.Token);
             _receivingTask = Task.Run(ReceiveAsync, _cancellationTokenSource.Token);
         }
         catch (Exception ex)
@@ -34,11 +37,17 @@ public class WebSocketService : IDisposable, IWebSocketService
 
     public async Task SendAsync(string message)
     {
-        if (_webSocket.State != WebSocketState.Open)
-            throw new InvalidOperationException("WebSocket connection is not open.");
+        try { 
+            if (_webSocket.State != WebSocketState.Open)
+                throw new InvalidOperationException("WebSocket connection is not open.");
 
-        var bytes = Encoding.UTF8.GetBytes(message);
-        await _webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            var bytes = Encoding.UTF8.GetBytes(message);
+            await _webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ErrorOccurred?.Invoke(ex);
+        }
     }
 
     private async Task ReceiveAsync()
@@ -49,7 +58,7 @@ public class WebSocketService : IDisposable, IWebSocketService
         {
             while (_webSocket.State == WebSocketState.Open)
             {
-                var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource.Token);
+                var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource!.Token);
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
@@ -77,23 +86,26 @@ public class WebSocketService : IDisposable, IWebSocketService
         {
             try
             {
-                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource?.Cancel();
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
+            }
+            catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.InvalidState)
+            {
+                // Ignore InvalidState error since it's expected in certain scenarios
             }
             catch (WebSocketException ex)
             {
                 ErrorOccurred?.Invoke(ex);
             }
         }
-        Dispose();
     }
 
     public bool IsConnected => _webSocket.State == WebSocketState.Open;
 
     public void Dispose()
     {
-        _cancellationTokenSource.Cancel();
         _webSocket.Dispose();
-        _cancellationTokenSource.Dispose();
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.Dispose();
     }
 }
