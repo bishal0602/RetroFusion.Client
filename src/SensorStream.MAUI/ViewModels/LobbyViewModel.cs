@@ -48,7 +48,7 @@ public partial class LobbyViewModel : ObservableObject
         var serverUri = new Uri($"ws://{value.Server.IP}:{value.Server.WS_Port}?username={value.Username}");
 
         _webSocketService.MessageReceived += OnMessageReceived;
-        _webSocketService.ErrorOccurred += OnSocketErrorOccurred;
+        _webSocketService.ErrorOccurred += async (e)=> await OnSocketErrorOccurredAsync(e);
 
         _webSocketService.ConnectAsync(serverUri);
     }
@@ -66,9 +66,15 @@ public partial class LobbyViewModel : ObservableObject
         }
     }
 
-    private void OnSocketErrorOccurred(Exception ex)
+    private async Task OnSocketErrorOccurredAsync(Exception ex)
     {
-        _uiNotificationHelper.DisplayAlertAsync("Web Socket Error", ex.Message);
+        await TerminateConnection();
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            await Shell.Current.GoToAsync("..");
+            await _uiNotificationHelper.DisplayAlertAsync("Web Socket Error",ex.Message);
+        });
     }
 
     private void StartSendingSensorData()
