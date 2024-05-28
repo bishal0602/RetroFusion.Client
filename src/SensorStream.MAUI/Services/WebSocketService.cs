@@ -7,9 +7,11 @@ public class WebSocketService : IDisposable, IWebSocketService
     private ClientWebSocket _webSocket;
     private CancellationTokenSource? _cancellationTokenSource;
     private Task _receivingTask;
+    private const int ConnectionTimeout = 5000; // Timeout for connection attempt in milliseconds
 
     public event Action<string>? MessageReceived;
     public event Action<Exception>? ErrorOccurred;
+    public bool IsConnected => _webSocket.State == WebSocketState.Open;
 
     public WebSocketService()
     {
@@ -20,18 +22,38 @@ public class WebSocketService : IDisposable, IWebSocketService
     {
         try
         {
-            // Needed if web socket is reconnected after a disconnection
+            // Ensure WebSocket is in a valid state
+            if (_webSocket.State == WebSocketState.Open || _webSocket.State == WebSocketState.Connecting)
+            {
+                throw new InvalidOperationException("WebSocket is already connected or connecting.");
+            }
+
+            // Needed if WebSocket is reconnected after a disconnection
             if (_webSocket.State == WebSocketState.Closed || _webSocket.State == WebSocketState.Aborted)
             {
-                _webSocket = new ClientWebSocket(); 
+                _webSocket.Dispose();
+                _webSocket = new ClientWebSocket();
             }
+
             _cancellationTokenSource = new CancellationTokenSource();
-            await _webSocket.ConnectAsync(serverUri, _cancellationTokenSource.Token);
-            _receivingTask = Task.Run(ReceiveAsync, _cancellationTokenSource.Token);
+            var connectTask = _webSocket.ConnectAsync(serverUri, _cancellationTokenSource.Token);
+
+            // Apply timeout for the connection attempt
+            if (await Task.WhenAny(connectTask, Task.Delay(ConnectionTimeout)) == connectTask)
+            {
+                await connectTask; // Await to catch any exceptions
+                _receivingTask = Task.Run(ReceiveAsync, _cancellationTokenSource.Token);
+            }
+            else
+            {
+                throw new TimeoutException("WebSocket connection attempt timed out.");
+            }
         }
         catch (Exception ex)
         {
             ErrorOccurred?.Invoke(ex);
+            // Clean up WebSocket state
+            await CleanupWebSocket();
         }
     }
 
@@ -99,8 +121,25 @@ public class WebSocketService : IDisposable, IWebSocketService
             }
         }
     }
-
-    public bool IsConnected => _webSocket.State == WebSocketState.Open;
+    private async Task CleanupWebSocket()
+    {
+        try
+        {
+            if (_webSocket.State == WebSocketState.Open)
+            {
+                await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Cleaning up", CancellationToken.None);
+            }
+        }
+        catch
+        {
+            // Ignore exceptions during cleanup
+        }
+        finally
+        {
+            _webSocket.Dispose();
+            _webSocket = new ClientWebSocket();
+        }
+    }
 
     public void Dispose()
     {
