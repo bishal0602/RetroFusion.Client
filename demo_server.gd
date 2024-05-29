@@ -24,7 +24,7 @@ func _process(delta):
 	socket.poll()
 	while socket.get_available_packet_count() > 0:
 		var pac := socket.get_packet();
-		print(pac.get_string_from_ascii())
+		_on_data_received(pac.get_string_from_ascii())
 
 func _input(event):
 	if Input.is_action_just_pressed("ui_accept"):
@@ -85,8 +85,8 @@ func _on_client_disconnected(id):
 	else:
 		print("Client disconnected with id: %d" % id)
 
-func _on_data_received(id, data):
-	print("Received data from %d: %s" % [id, data])
+func _on_data_received(data):
+	print(data)
 	
 	
 func _parse_query_params(uri: String) -> Dictionary:

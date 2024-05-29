@@ -12,4 +12,4 @@ Basically listens to UDP broadcasts on the network. Parses the packet for host i
 - [Demo Godot Server](demo_server.gd)
 
 
-### [Download apk](https://1drv.ms/u/c/6f7b14e4559c6d8e/EcE6osX5FFNMoi7vSk3-_t4Bh2DP5tmYIALU5TYvVjZOUQ?e=ugfleG)
+### [Download apk](https://1drv.ms/u/c/6f7b14e4559c6d8e/EaK3Ja2w7VdKih-foZrpAM4BUq7op-lfk9IrIJ9aTmqMFw?e=RTu47R)

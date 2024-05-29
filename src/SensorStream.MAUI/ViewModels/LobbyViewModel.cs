@@ -23,17 +23,16 @@ public partial class LobbyViewModel : ObservableObject
 
     IWebSocketService _webSocketService;
     private readonly IUiNotificationHelper _uiNotificationHelper;
-    private readonly SensorService _sensorService;
+    private readonly ISensorService _sensorService;
 
     private EventHandler<AccelerometerChangedEventArgs>? _accelerometerHandler;
-    public LobbyViewModel(IWebSocketService webSocketService, IUiNotificationHelper uiNotificationHelper)
+    public LobbyViewModel(IWebSocketService webSocketService, ISensorService sensorService, IUiNotificationHelper uiNotificationHelper)
     {
         _webSocketService = webSocketService;
         _uiNotificationHelper = uiNotificationHelper;
+        _sensorService = sensorService;
 
-        _sensorService = new SensorService();
         _sensorService.StartIfNotStarted();
-
         StartListeningForSensorData();
     }
 
@@ -73,7 +72,7 @@ public partial class LobbyViewModel : ObservableObject
         MainThread.BeginInvokeOnMainThread(async () =>
         {
             await Shell.Current.GoToAsync("..");
-            await _uiNotificationHelper.DisplayAlertAsync("Web Socket Error",ex.Message);
+            await _uiNotificationHelper.DisplayToastAsync($"Socket error:{ex.Message}");
         });
     }
 
@@ -84,7 +83,7 @@ public partial class LobbyViewModel : ObservableObject
         {
             var sensorData = new
             {
-                Id = SocketId,
+                id = SocketId,
                 acc = new
                 {
                     x = AccelerometerData.Acceleration.X,

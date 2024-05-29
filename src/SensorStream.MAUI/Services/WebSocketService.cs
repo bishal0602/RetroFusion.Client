@@ -46,7 +46,7 @@ public class WebSocketService : IDisposable, IWebSocketService
             }
             else
             {
-                throw new TimeoutException("WebSocket connection attempt timed out.");
+                throw new TimeoutException("Timed out. Couldn't establish web socket connection.");
             }
         }
         catch (Exception ex)

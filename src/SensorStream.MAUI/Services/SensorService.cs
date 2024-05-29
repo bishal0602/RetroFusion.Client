@@ -1,14 +1,14 @@
 ﻿namespace SensorStream.MAUI.Services;
 
-public class SensorService
+public class SensorService : ISensorService
 {
-    public readonly IAccelerometer Accelerometer = Microsoft.Maui.Devices.Sensors.Accelerometer.Default;
-    public readonly IGyroscope Gyroscope = Microsoft.Maui.Devices.Sensors.Gyroscope.Default;
-    public readonly IOrientationSensor OrientationSensor = Microsoft.Maui.Devices.Sensors.OrientationSensor.Default;
+    public IAccelerometer Accelerometer { get; } = Microsoft.Maui.Devices.Sensors.Accelerometer.Default;
+    public IGyroscope Gyroscope { get; } = Microsoft.Maui.Devices.Sensors.Gyroscope.Default;
+    public IOrientationSensor OrientationSensor { get; } = Microsoft.Maui.Devices.Sensors.OrientationSensor.Default;
 
     public SensorService()
     {
-         
+
     }
 
     public void StartIfNotStarted()
@@ -28,7 +28,7 @@ public class SensorService
     }
 
 
-public void StopIfStarted()
+    public void StopIfStarted()
     {
         if (Accelerometer.IsMonitoring)
         {
