@@ -11,6 +11,7 @@ public class WebSocketService : IDisposable, IWebSocketService
 
     public event Action<string>? MessageReceived;
     public event Action<Exception>? ErrorOccurred;
+    public event Action? ServerConnected;
     public bool IsConnected => _webSocket.State == WebSocketState.Open;
 
     public WebSocketService()
@@ -43,6 +44,7 @@ public class WebSocketService : IDisposable, IWebSocketService
             {
                 await connectTask; // Await to catch any exceptions
                 _receivingTask = Task.Run(ReceiveAsync, _cancellationTokenSource.Token);
+                ServerConnected.Invoke();
             }
             else
             {

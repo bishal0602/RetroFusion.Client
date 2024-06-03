@@ -32,7 +32,7 @@ public class SensorService : ISensorService
     {
         if (Accelerometer.IsMonitoring)
         {
-            Microsoft.Maui.Devices.Sensors.Accelerometer.Stop();
+            Accelerometer.Stop();
         }
         if (Gyroscope.IsMonitoring)
         {

@@ -8,7 +8,8 @@ public partial class LobbyPage : ContentPage
 	{
 		InitializeComponent();
 		BindingContext = lobbyViewModel;
-	}
+        Shell.SetNavBarIsVisible(this, false);
+    }
     protected override bool OnBackButtonPressed()
     {
         ShowExitConfirmation();

@@ -1,6 +1,4 @@
-﻿using SensorStream.MAUI.Models;
-
-namespace SensorStream.MAUI.Models;
+﻿namespace SensorStream.MAUI.Models;
 
 public class LobbyParams
 {

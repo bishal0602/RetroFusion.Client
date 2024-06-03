@@ -1,8 +1,10 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using SensorStream.MAUI.Helpers;
 using SensorStream.MAUI.Models;
 using SensorStream.MAUI.Services;
 using System.Diagnostics;
+using System.Numerics;
 using System.Text.Json;
 
 namespace SensorStream.MAUI.ViewModels;
@@ -15,13 +17,20 @@ public partial class LobbyViewModel : ObservableObject
     string socketId = string.Empty;
 
     [ObservableProperty]
-    AccelerometerData accelerometerData = new();
+    Vector3 accelerometerData = new();
     [ObservableProperty]
-    GyroscopeData gyroscopeData = new();
+    Vector3 gyroscopeData = new();
     [ObservableProperty]
-    OrientationSensorData orientationData = new();
+    Quaternion orientationData = new();
 
-    IWebSocketService _webSocketService;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotSendingSensorData))]
+    bool isSendingSensorData = false;
+
+    public bool IsNotSendingSensorData => !IsSendingSensorData;
+
+
+    private readonly IWebSocketService _webSocketService;
     private readonly IUiNotificationHelper _uiNotificationHelper;
     private readonly ISensorService _sensorService;
 
@@ -35,7 +44,12 @@ public partial class LobbyViewModel : ObservableObject
         _sensorService.StartIfNotStarted();
         StartListeningForSensorData();
     }
-
+    [RelayCommand]
+    public void Start()
+    {
+        StartSendingSensorData();
+        IsSendingSensorData = true;
+    }
     partial void OnLobbyParamsChanged(LobbyParams value)
     {
         if (value.Server is null || string.IsNullOrWhiteSpace(value.Username))
@@ -48,6 +62,7 @@ public partial class LobbyViewModel : ObservableObject
 
         _webSocketService.MessageReceived += OnMessageReceived;
         _webSocketService.ErrorOccurred += async (e)=> await OnSocketErrorOccurredAsync(e);
+        _webSocketService.ServerConnected += async () => await _uiNotificationHelper.DisplayToastAsync("Connected to server");
 
         _webSocketService.ConnectAsync(serverUri);
     }
@@ -58,10 +73,6 @@ public partial class LobbyViewModel : ObservableObject
         if (message.StartsWith("SocketId:"))
         {
             SocketId = message.Replace("SocketId:", "");
-        }
-        if (message == "GameStart")
-        {
-            StartSendingSensorData();
         }
     }
 
@@ -86,22 +97,22 @@ public partial class LobbyViewModel : ObservableObject
                 id = SocketId,
                 acc = new
                 {
-                    x = AccelerometerData.Acceleration.X,
-                    y = AccelerometerData.Acceleration.Y,
-                    z = AccelerometerData.Acceleration.Z
+                    x = AccelerometerData.X,
+                    y = AccelerometerData.Y,
+                    z = AccelerometerData.Z
                 },
                 gyro = new
                 {
-                    x = GyroscopeData.AngularVelocity.X,
-                    y = GyroscopeData.AngularVelocity.Y,
-                    z = GyroscopeData.AngularVelocity.Z
+                    x = GyroscopeData.X,
+                    y = GyroscopeData.Y,
+                    z = GyroscopeData.Z
                 },
                 ori = new
                 {
-                    x = OrientationData.Orientation.X,
-                    y = OrientationData.Orientation.Y,
-                    z = OrientationData.Orientation.Z,
-                    w = OrientationData.Orientation.W
+                    x = OrientationData.X,
+                    y = OrientationData.Y,
+                    z = OrientationData.Z,
+                    w = OrientationData.W
                 }
             };
             var json = JsonSerializer.Serialize(sensorData);
@@ -117,17 +128,17 @@ public partial class LobbyViewModel : ObservableObject
         _sensorService.Accelerometer.ReadingChanged += (sender, args) =>
         {
             var reading = args.Reading;
-            AccelerometerData = reading;
+            AccelerometerData = reading.Acceleration;
         };
         _sensorService.Gyroscope.ReadingChanged += (sender, args) =>
         {
             var reading = args.Reading;
-            GyroscopeData = reading;
+            GyroscopeData = reading.AngularVelocity;
         };
         _sensorService.OrientationSensor.ReadingChanged += (sender, args) =>
         {
             var reading = args.Reading;
-            OrientationData = reading;
+            OrientationData = reading.Orientation;
         };
     }
 

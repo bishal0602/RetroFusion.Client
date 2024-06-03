@@ -27,7 +27,6 @@ namespace SensorStream.MAUI
 
             builder.Services.AddTransient<IUdpService, UdpService>();
 
-
             builder.Services.AddSingleton<MainPage>();
             builder.Services.AddSingleton<MainViewModel>();
 
