@@ -6,7 +6,7 @@ public class WebSocketService : IDisposable, IWebSocketService
 {
     private ClientWebSocket _webSocket;
     private CancellationTokenSource? _cancellationTokenSource;
-    private Task _receivingTask;
+    private Task? _receivingTask;
     private const int ConnectionTimeout = 5000; // Timeout for connection attempt in milliseconds
 
     public event Action<string>? MessageReceived;
@@ -44,7 +44,7 @@ public class WebSocketService : IDisposable, IWebSocketService
             {
                 await connectTask; // Await to catch any exceptions
                 _receivingTask = Task.Run(ReceiveAsync, _cancellationTokenSource.Token);
-                ServerConnected.Invoke();
+                ServerConnected?.Invoke();
             }
             else
             {

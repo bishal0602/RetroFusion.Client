@@ -3,13 +3,12 @@ using CommunityToolkit.Mvvm.Input;
 using SensorStream.MAUI.Helpers;
 using SensorStream.MAUI.Models;
 using SensorStream.MAUI.Services;
-using System.Diagnostics;
 using System.Numerics;
 using System.Text.Json;
 
 namespace SensorStream.MAUI.ViewModels;
 [QueryProperty("LobbyParams", "LobbyParams")]
-public partial class LobbyViewModel : ObservableObject
+public sealed partial class LobbyViewModel : ObservableObject
 {
     [ObservableProperty]
     LobbyParams lobbyParams;

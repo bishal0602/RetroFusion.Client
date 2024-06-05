@@ -7,7 +7,7 @@ using System.Collections.ObjectModel;
 
 namespace SensorStream.MAUI.ViewModels;
 
-public partial class MainViewModel: ObservableObject, IDisposable
+public sealed partial class MainViewModel: ObservableObject, IDisposable
 {
     const int UDP_BROADCAST_PORT = 9752;
 
