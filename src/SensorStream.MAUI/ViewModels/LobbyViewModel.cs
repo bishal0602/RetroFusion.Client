@@ -60,7 +60,7 @@ public sealed partial class LobbyViewModel : ObservableObject
         var serverUri = new Uri($"ws://{value.Server.IP}:{value.Server.WS_Port}?username={value.Username}");
 
         _webSocketService.MessageReceived += OnMessageReceived;
-        _webSocketService.ErrorOccurred += async (e)=> await OnSocketErrorOccurredAsync(e);
+        _webSocketService.ErrorOccurred += async (e, n)=> await OnSocketErrorOccurredAsync(e, n);
         _webSocketService.ServerConnected += async () => await _uiNotificationHelper.DisplayToastAsync("Connected to server");
 
         _webSocketService.ConnectAsync(serverUri);
@@ -75,14 +75,14 @@ public sealed partial class LobbyViewModel : ObservableObject
         }
     }
 
-    private async Task OnSocketErrorOccurredAsync(Exception ex)
+    private async Task OnSocketErrorOccurredAsync(Exception ex, string nameOfMethod)
     {
         await TerminateConnection();
 
         MainThread.BeginInvokeOnMainThread(async () =>
         {
             await Shell.Current.GoToAsync("..");
-            await _uiNotificationHelper.DisplayToastAsync($"Socket error:{ex.Message}");
+            await _uiNotificationHelper.DisplayToastAsync($"Socket.{nameOfMethod}: {ex.Message}");
         });
     }
 

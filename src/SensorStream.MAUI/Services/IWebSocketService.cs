@@ -7,7 +7,7 @@ public interface IWebSocketService
     bool IsConnected { get; }
 
     event Action<string> MessageReceived;
-    event Action<Exception> ErrorOccurred;
+    event Action<Exception, string> ErrorOccurred;
     event Action? ServerConnected;
 
     Task ConnectAsync(Uri serverUri);

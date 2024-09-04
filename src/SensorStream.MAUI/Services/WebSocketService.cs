@@ -10,7 +10,7 @@ public class WebSocketService : IDisposable, IWebSocketService
     private const int ConnectionTimeout = 5000; // Timeout for connection attempt in milliseconds
 
     public event Action<string>? MessageReceived;
-    public event Action<Exception>? ErrorOccurred;
+    public event Action<Exception, string>? ErrorOccurred;
     public event Action? ServerConnected;
     public bool IsConnected => _webSocket.State == WebSocketState.Open;
 
@@ -48,12 +48,12 @@ public class WebSocketService : IDisposable, IWebSocketService
             }
             else
             {
-                throw new TimeoutException("Timed out. Couldn't establish web socket connection.");
+                throw new TimeoutException("Timed out, couldn't establish connection.");
             }
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(ex);
+            ErrorOccurred?.Invoke(ex, nameof(ConnectAsync));
             // Clean up WebSocket state
             await CleanupWebSocket();
         }
@@ -70,7 +70,7 @@ public class WebSocketService : IDisposable, IWebSocketService
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(ex);
+            ErrorOccurred?.Invoke(ex, nameof(SendAsync));
         }
     }
 
@@ -100,7 +100,7 @@ public class WebSocketService : IDisposable, IWebSocketService
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(ex);
+            ErrorOccurred?.Invoke(ex, nameof(ReceiveAsync));
         }
     }
 
@@ -119,7 +119,7 @@ public class WebSocketService : IDisposable, IWebSocketService
             }
             catch (WebSocketException ex)
             {
-                ErrorOccurred?.Invoke(ex);
+                ErrorOccurred?.Invoke(ex, nameof(DisconnectAsync));
             }
         }
     }
