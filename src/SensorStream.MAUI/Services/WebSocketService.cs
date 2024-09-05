@@ -2,12 +2,11 @@
 using System.Text;
 
 namespace SensorStream.MAUI.Services;
-public class WebSocketService : IDisposable, IWebSocketService
+public sealed class WebSocketService : IDisposable, IWebSocketService
 {
     private ClientWebSocket _webSocket;
-    private CancellationTokenSource? _cancellationTokenSource;
     private Task? _receivingTask;
-    private const int ConnectionTimeout = 5000; // Timeout for connection attempt in milliseconds
+    private const int ConnectionTimeout = 5000;
 
     public event Action<string>? MessageReceived;
     public event Action<Exception, string>? ErrorOccurred;
@@ -19,7 +18,7 @@ public class WebSocketService : IDisposable, IWebSocketService
         _webSocket = new ClientWebSocket();
     }
 
-    public async Task ConnectAsync(Uri serverUri)
+    public async Task ConnectAsync(Uri serverUri, CancellationToken cancellationToken)
     {
         try
         {
@@ -36,14 +35,13 @@ public class WebSocketService : IDisposable, IWebSocketService
                 _webSocket = new ClientWebSocket();
             }
 
-            _cancellationTokenSource = new CancellationTokenSource();
-            var connectTask = _webSocket.ConnectAsync(serverUri, _cancellationTokenSource.Token);
+            var connectTask = _webSocket.ConnectAsync(serverUri, cancellationToken);
 
             // Apply timeout for the connection attempt
-            if (await Task.WhenAny(connectTask, Task.Delay(ConnectionTimeout)) == connectTask)
+            if (await Task.WhenAny(connectTask, Task.Delay(ConnectionTimeout, cancellationToken)) == connectTask)
             {
                 await connectTask; // Await to catch any exceptions
-                _receivingTask = Task.Run(ReceiveAsync, _cancellationTokenSource.Token);
+                _receivingTask = ReceiveAsync(cancellationToken);
                 ServerConnected?.Invoke();
             }
             else
@@ -54,19 +52,18 @@ public class WebSocketService : IDisposable, IWebSocketService
         catch (Exception ex)
         {
             ErrorOccurred?.Invoke(ex, nameof(ConnectAsync));
-            // Clean up WebSocket state
             await CleanupWebSocket();
         }
     }
 
-    public async Task SendAsync(string message)
+    public async Task SendAsync(string message, CancellationToken token)
     {
         try { 
             if (_webSocket.State != WebSocketState.Open)
                 throw new InvalidOperationException("WebSocket connection is not open.");
 
             var bytes = Encoding.UTF8.GetBytes(message);
-            await _webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            await _webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, token);
         }
         catch (Exception ex)
         {
@@ -74,7 +71,7 @@ public class WebSocketService : IDisposable, IWebSocketService
         }
     }
 
-    private async Task ReceiveAsync()
+    private async Task ReceiveAsync(CancellationToken cancellationToken)
     {
         var buffer = new byte[1024 * 4];
 
@@ -82,7 +79,7 @@ public class WebSocketService : IDisposable, IWebSocketService
         {
             while (_webSocket.State == WebSocketState.Open)
             {
-                var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), _cancellationTokenSource!.Token);
+                var result = await _webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
@@ -110,7 +107,6 @@ public class WebSocketService : IDisposable, IWebSocketService
         {
             try
             {
-                _cancellationTokenSource?.Cancel();
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", CancellationToken.None);
             }
             catch (WebSocketException ex) when (ex.WebSocketErrorCode == WebSocketError.InvalidState)
@@ -146,7 +142,5 @@ public class WebSocketService : IDisposable, IWebSocketService
     public void Dispose()
     {
         _webSocket.Dispose();
-        _cancellationTokenSource?.Cancel();
-        _cancellationTokenSource?.Dispose();
     }
 }

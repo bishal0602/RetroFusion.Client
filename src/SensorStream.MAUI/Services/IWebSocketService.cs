@@ -10,8 +10,8 @@ public interface IWebSocketService
     event Action<Exception, string> ErrorOccurred;
     event Action? ServerConnected;
 
-    Task ConnectAsync(Uri serverUri);
+    Task ConnectAsync(Uri serverUri, CancellationToken cancellationToken);
     Task DisconnectAsync();
     void Dispose();
-    Task SendAsync(string message);
+    Task SendAsync(string message, CancellationToken cancellationToken);
 }

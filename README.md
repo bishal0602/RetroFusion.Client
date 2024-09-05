@@ -2,14 +2,11 @@
 
 Client app for Retrofusion project
 
-Basically listens to UDP broadcasts on the network. Parses the packet for host information and then based on the extracted information, connects to a Web Socket port and sends device's Motion Sensor data.
+### What it does?
 
-### Main components
-- [Main View Model](src/SensorStream.MAUI/ViewModels/MainPageViewModel.cs)
-- [Upd Listener](src/SensorStream.MAUI/Services/UdpService.cs)
-- [Lobby View Model](src/SensorStream.MAUI/ViewModels/LobbyViewModel.cs)
-- [Web Socket Client](src/SensorStream.MAUI/Services/WebSocketService.cs)
-- [Demo Godot Server](demo_server.gd)
+1. The app listens for UDP broadcast messages on the network. These broadcasts contain information about available servers.
+2.	Upon receiving a UDP packet, the app parses the packet to extract host information, such as the server's IP address and WebSocket port.
+3.	Using the extracted host information, the app establishes a connection to the server using the WebSocket protocol.
+4.	Once connected, the app continuously streams the mobile phone's sensor data to the server over the WebSocket connection for gameplay control.
 
-
-### [Download apk v0.4](https://1drv.ms/u/c/6f7b14e4559c6d8e/Ef1ROzSAA25FnCKYvIGWCkEB7ePiMAg8rd2PJzu15xXpbw?e=13Tyzj)
+## [Download apk](https://dist.bishal0602.com.np/retrofusion/SensorStream.apk)

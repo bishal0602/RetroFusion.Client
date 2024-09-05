@@ -28,25 +28,39 @@ public sealed partial class LobbyViewModel : ObservableObject
 
     public bool IsNotSendingSensorData => !IsSendingSensorData;
 
-
     private readonly IWebSocketService _webSocketService;
     private readonly IUiNotificationHelper _uiNotificationHelper;
     private readonly ISensorService _sensorService;
 
-    private EventHandler<AccelerometerChangedEventArgs>? _accelerometerHandler;
+    private readonly Timer _sensorUIUpdateTimer;
+    private readonly Timer _sensorDataSendTimer;
+    private const int SensorRefreshIntervalMs = 20;
+
+    private readonly CancellationTokenSource _cancellationTokenSource;
     public LobbyViewModel(IWebSocketService webSocketService, ISensorService sensorService, IUiNotificationHelper uiNotificationHelper)
     {
         _webSocketService = webSocketService;
         _uiNotificationHelper = uiNotificationHelper;
         _sensorService = sensorService;
 
+        _cancellationTokenSource = new CancellationTokenSource();
+
         _sensorService.StartIfNotStarted();
-        StartListeningForSensorData();
+        _sensorDataSendTimer = new Timer(async _ =>
+        {
+            await SendSensorDataAsync();
+        }, null, Timeout.Infinite, Timeout.Infinite);
+        _sensorUIUpdateTimer = new Timer(_ =>
+        {
+            AccelerometerData = _sensorService.AccelerometerData;
+            GyroscopeData = _sensorService.GyroscopeData;
+            OrientationData = _sensorService.OrientationData;
+        }, null, 0, SensorRefreshIntervalMs);
     }
     [RelayCommand]
     public void Start()
     {
-        StartSendingSensorData();
+        _sensorDataSendTimer.Change(0, SensorRefreshIntervalMs); // Starts sending data every interval
         IsSendingSensorData = true;
     }
     partial void OnLobbyParamsChanged(LobbyParams value)
@@ -63,7 +77,7 @@ public sealed partial class LobbyViewModel : ObservableObject
         _webSocketService.ErrorOccurred += async (e, n)=> await OnSocketErrorOccurredAsync(e, n);
         _webSocketService.ServerConnected += async () => await _uiNotificationHelper.DisplayToastAsync("Connected to server");
 
-        _webSocketService.ConnectAsync(serverUri);
+        _webSocketService.ConnectAsync(serverUri, _cancellationTokenSource.Token);
     }
 
     private void OnMessageReceived(string message)
@@ -85,73 +99,44 @@ public sealed partial class LobbyViewModel : ObservableObject
             await _uiNotificationHelper.DisplayToastAsync($"Socket.{nameOfMethod}: {ex.Message}");
         });
     }
-
-    private void StartSendingSensorData()
+    private async Task SendSensorDataAsync()
     {
-        // Make it timer based instead of accelerometer subscriber???
-        _accelerometerHandler = async (_, _) =>
+        var sensorData = new
         {
-            var sensorData = new
+            id = SocketId,
+            acc = new
             {
-                id = SocketId,
-                acc = new
-                {
-                    x = AccelerometerData.X,
-                    y = AccelerometerData.Y,
-                    z = AccelerometerData.Z
-                },
-                gyro = new
-                {
-                    x = GyroscopeData.X,
-                    y = GyroscopeData.Y,
-                    z = GyroscopeData.Z
-                },
-                ori = new
-                {
-                    x = OrientationData.X,
-                    y = OrientationData.Y,
-                    z = OrientationData.Z,
-                    w = OrientationData.W
-                }
-            };
-            var json = JsonSerializer.Serialize(sensorData);
-            await _webSocketService.SendAsync(json);
+                x = _sensorService.AccelerometerData.X,
+                y = _sensorService.AccelerometerData.Y,
+                z = _sensorService.AccelerometerData.Z
+            },
+            gyro = new
+            {
+                x = _sensorService.GyroscopeData.X,
+                y = _sensorService.GyroscopeData.Y,
+                z = _sensorService.GyroscopeData.Z
+            },
+            ori = new
+            {
+                x = _sensorService.OrientationData.X,
+                y = _sensorService.OrientationData.Y,
+                z = _sensorService.OrientationData.Z,
+                w = _sensorService.OrientationData.W
+            }
         };
-
-         _sensorService.Accelerometer.ReadingChanged += _accelerometerHandler;
-    }
-    private void StartListeningForSensorData()
-    {
-        _sensorService.StartIfNotStarted();
-
-        _sensorService.Accelerometer.ReadingChanged += (sender, args) =>
-        {
-            var reading = args.Reading;
-            AccelerometerData = reading.Acceleration;
-        };
-        _sensorService.Gyroscope.ReadingChanged += (sender, args) =>
-        {
-            var reading = args.Reading;
-            GyroscopeData = reading.AngularVelocity;
-        };
-        _sensorService.OrientationSensor.ReadingChanged += (sender, args) =>
-        {
-            var reading = args.Reading;
-            OrientationData = reading.Orientation;
-        };
+        var json = JsonSerializer.Serialize(sensorData);
+        await _webSocketService.SendAsync(json, _cancellationTokenSource.Token);
     }
 
     public async Task TerminateConnection()
     {
+        _cancellationTokenSource.Cancel();
+        _sensorDataSendTimer.Change(Timeout.Infinite, Timeout.Infinite); // Stop the timer
+        _sensorUIUpdateTimer.Change(Timeout.Infinite, Timeout.Infinite); // Stop the timer
+        _sensorService.StopIfStarted();
         if (_webSocketService != null)
         {
             await _webSocketService.DisconnectAsync();
-        }
-        _sensorService.StopIfStarted();
-        if (_accelerometerHandler != null)
-        {
-            _sensorService.Accelerometer.ReadingChanged -= _accelerometerHandler;
-            _accelerometerHandler = null;
         }
     }
 }

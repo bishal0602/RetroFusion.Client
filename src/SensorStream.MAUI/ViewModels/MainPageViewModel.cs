@@ -41,7 +41,7 @@ public sealed partial class MainViewModel: ObservableObject, IDisposable
             await _uiNotificationHelper.DisplayToastAsync("Please connect to a network first");
             return;
         }
-        if (String.IsNullOrEmpty(Username))
+        if (string.IsNullOrEmpty(Username))
         {
             await _uiNotificationHelper.DisplayToastAsync("Please enter a username first");
             return;
@@ -61,7 +61,7 @@ public sealed partial class MainViewModel: ObservableObject, IDisposable
     [RelayCommand]
     async Task SelectServer(BroadcastMessageModel selectedServer)
     {
-        if (String.IsNullOrEmpty(Username))
+        if (string.IsNullOrEmpty(Username))
         {
             await _uiNotificationHelper.DisplayToastAsync("Please enter a username first");
             return;
@@ -74,6 +74,7 @@ public sealed partial class MainViewModel: ObservableObject, IDisposable
     }
     public void Dispose()
     {
+        _udpService.MessageReceived -= OnMessageReceived;
         _udpService.Dispose();
     }
     private void OnMessageReceived(BroadcastMessageModel message)

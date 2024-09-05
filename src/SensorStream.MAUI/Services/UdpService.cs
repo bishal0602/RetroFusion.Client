@@ -6,11 +6,12 @@ using System.Text;
 
 namespace SensorStream.MAUI.Services;
 
-public class UdpService : IDisposable, IUdpService
+public sealed class UdpService : IDisposable, IUdpService
 {
     private UdpClient? _udpClient;
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly IUiNotificationHelper _uiNotificationHelper;
+    private static readonly string[] messageSeparator = new[] { ";;" };
 
     public event Action<BroadcastMessageModel>? MessageReceived;
 
@@ -65,11 +66,12 @@ public class UdpService : IDisposable, IUdpService
         }
     }
     /// <summary>
-    /// Returns a BroadcastMessage if the message is in the correct format else returns null. Message must be in format [Name];;[Port]
+    /// Returns a BroadcastMessage if the message is in the correct format else returns null. 
+    /// Message must be in format [Name];;[Port]
     /// </summary>
-    private BroadcastMessageModel? ParseMessage(string message, string ip)
+    private static BroadcastMessageModel? ParseMessage(string message, string ip)
     {
-        var parts = message.Split(new[] { ";;" }, StringSplitOptions.None);
+        var parts = message.Split(messageSeparator, StringSplitOptions.None);
         if (parts.Length == 2 && int.TryParse(parts[1], out var port))
         {
             return new BroadcastMessageModel(parts[0], ip, port);
