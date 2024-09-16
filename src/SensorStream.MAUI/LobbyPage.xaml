@@ -140,28 +140,42 @@
         <!-- Send Button -->
         <VerticalStackLayout
             Grid.Row="2">
+            <!-- Button for starting the sensor -->
             <Button 
-                Text="Start" 
-                Command="{Binding StartCommand}"
-                FontSize="Medium"
-                WidthRequest="150" 
-                HeightRequest="150"
-                CornerRadius="150"
-                VerticalOptions="Center"
-                HorizontalOptions="Center" 
-                IsVisible="{Binding IsNotSendingSensorData}"/>
+        Text="Start" 
+        Command="{Binding StartCommand}"
+        FontSize="Medium"
+        WidthRequest="150" 
+        HeightRequest="150"
+        CornerRadius="150"
+        VerticalOptions="Center"
+        HorizontalOptions="Center" 
+        IsVisible="{Binding ShowStartButton}"/>
 
+            <!-- Button for showing "Sending..." -->
             <Button 
-                Text="Sending..." 
-                Command="{Binding StartCommand}"
-                FontSize="Default"
-                WidthRequest="150" 
-                HeightRequest="150"
-                CornerRadius="150"
-                VerticalOptions="Center"
-                HorizontalOptions="Center" 
-                IsVisible="{Binding IsSendingSensorData}"
-                IsEnabled="False"/>
+        Text="Sending..." 
+        Command="{Binding StartCommand}"
+        FontSize="Default"
+        WidthRequest="150" 
+        HeightRequest="150"
+        CornerRadius="150"
+        VerticalOptions="Center"
+        HorizontalOptions="Center" 
+        IsVisible="{Binding ShowSendingButton}"
+        IsEnabled="False"/>
+
+            <!-- Button for "Connecting..." -->
+            <Button 
+        Text="Connecting.." 
+        FontSize="Default"
+        WidthRequest="150" 
+        HeightRequest="150"
+        CornerRadius="150"
+        VerticalOptions="Center"
+        HorizontalOptions="Center" 
+        IsVisible="{Binding ShowConnectingButton}"
+        IsEnabled="False"/>
         </VerticalStackLayout>
     </Grid>
 </ContentPage>

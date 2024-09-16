@@ -23,10 +23,19 @@ public sealed partial class LobbyViewModel : ObservableObject
     Quaternion orientationData = new();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNotSendingSensorData))]
+    [NotifyPropertyChangedFor(nameof(ShowStartButton))]
+    [NotifyPropertyChangedFor(nameof(ShowSendingButton))]
+    [NotifyPropertyChangedFor(nameof(ShowConnectingButton))]
     bool isSendingSensorData = false;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowStartButton))]
+    [NotifyPropertyChangedFor(nameof(ShowSendingButton))]
+    [NotifyPropertyChangedFor(nameof(ShowConnectingButton))]
+    bool isConnected = false;
 
-    public bool IsNotSendingSensorData => !IsSendingSensorData;
+    public bool ShowStartButton => IsConnected && !IsSendingSensorData;
+    public bool ShowSendingButton => IsConnected && IsSendingSensorData;
+    public bool ShowConnectingButton => !IsConnected;
 
     private readonly IWebSocketService _webSocketService;
     private readonly IUiNotificationHelper _uiNotificationHelper;
@@ -75,7 +84,11 @@ public sealed partial class LobbyViewModel : ObservableObject
 
         _webSocketService.MessageReceived += OnMessageReceived;
         _webSocketService.ErrorOccurred += async (e, n)=> await OnSocketErrorOccurredAsync(e, n);
-        _webSocketService.ServerConnected += async () => await _uiNotificationHelper.DisplayToastAsync("Connected to server");
+        _webSocketService.ServerConnected += async () =>
+        {
+            IsConnected = true;
+            await _uiNotificationHelper.DisplayToastAsync("Connected to server");
+        };
 
         _webSocketService.ConnectAsync(serverUri, _cancellationTokenSource.Token);
     }
@@ -138,5 +151,6 @@ public sealed partial class LobbyViewModel : ObservableObject
         {
             await _webSocketService.DisconnectAsync();
         }
+        IsConnected = false;
     }
 }
