@@ -21,6 +21,7 @@ namespace SensorStream.MAUI
                 });
 
             builder.Services.AddSingleton<IConnectivity>(Connectivity.Current);
+            builder.Services.AddSingleton<IVibration>(Vibration.Default);
             builder.Services.AddSingleton<IUiNotificationHelper, UINotificationHelper>();
             builder.Services.AddSingleton<IWebSocketService, WebSocketService>();
             builder.Services.AddSingleton<ISensorService, SensorService>();

@@ -39,6 +39,7 @@ public sealed partial class LobbyViewModel : ObservableObject
 
     private readonly IWebSocketService _webSocketService;
     private readonly IUiNotificationHelper _uiNotificationHelper;
+    private readonly IVibration _vibration;
     private readonly ISensorService _sensorService;
 
     private readonly Timer _sensorUIUpdateTimer;
@@ -46,10 +47,11 @@ public sealed partial class LobbyViewModel : ObservableObject
     private const int SensorRefreshIntervalMs = 20;
 
     private readonly CancellationTokenSource _cancellationTokenSource;
-    public LobbyViewModel(IWebSocketService webSocketService, ISensorService sensorService, IUiNotificationHelper uiNotificationHelper)
+    public LobbyViewModel(IWebSocketService webSocketService, ISensorService sensorService, IUiNotificationHelper uiNotificationHelper, IVibration vibration)
     {
         _webSocketService = webSocketService;
         _uiNotificationHelper = uiNotificationHelper;
+        _vibration = vibration;
         _sensorService = sensorService;
 
         _cancellationTokenSource = new CancellationTokenSource();
@@ -95,10 +97,15 @@ public sealed partial class LobbyViewModel : ObservableObject
 
     private void OnMessageReceived(string message)
     {
-        // Just for testing, needs refactoring
+        if(IsSendingSensorData && message == "striked_ball")
+        {
+            _vibration.Vibrate(TimeSpan.FromMilliseconds(60));
+            return;
+        }
         if (message.StartsWith("SocketId:"))
         {
             SocketId = message.Replace("SocketId:", "");
+            return;
         }
     }
 
