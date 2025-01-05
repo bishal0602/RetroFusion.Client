@@ -1,12 +1,12 @@
-## Under construction 🚧
+# Retrofusion.Client [ARCHIVED]
 
-Client app for Retrofusion project
+> [!WARNING] 
+> This repository has been archived and moved to the [Retrofusion main repository](https://github.com/Fiesty-Cushion/Retro-Fusion). Please use the main repository for all updates, issues, and contributions.
 
-### What it does?
+## Historical Information
 
-1. The app listens for UDP broadcast messages on the network. These broadcasts contain information about available servers.
-2.	Upon receiving a UDP packet, the app parses the packet to extract host information, such as the server's IP address and WebSocket port.
-3.	Using the extracted host information, the app establishes a connection to the server using the WebSocket protocol.
-4.	Once connected, the app continuously streams the mobile phone's sensor data to the server over the WebSocket connection for gameplay control.
-
-## [Download apk](https://dist.bishal0602.com.np/retrofusion/SensorStream.apk)
+This was originally a client app for the Retrofusion project that:
+1. Listened for UDP broadcast messages on the network containing information about available servers
+2. Parsed UDP packets to extract host information (server IP address and WebSocket port)
+3. Established WebSocket connections to servers using the extracted host information
+4. Streamed mobile phone sensor data to the server over WebSocket for gameplay control
